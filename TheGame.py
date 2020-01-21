@@ -11,10 +11,21 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-FPS =90
+HIGH_SPEED = 4
+LOW_SPEED = 2
+NO_SPEED = 0
+
+FPS = 240
 
 class Player(pygame.sprite.Sprite):
     angle = 0
+
+    def updateAngle(self, x):
+        self.angle += x;
+        if self.angle >= 360:
+            self.angle = 0
+        if self.angle < 0:
+            self.angle = 360
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.original_surface = pygame.Surface((50, 50))
@@ -23,24 +34,24 @@ class Player(pygame.sprite.Sprite):
         #self.image.fill(GREEN)
         self.rect = self.image.get_rect()
         self.rect.center = (WIDTH / 2, HEIGHT / 2)
-        pygame.draw.line(self.original_surface, RED, (25,25), (25,50), 4)
+        pygame.draw.line(self.original_surface, RED, (25,25), (25,0), 4)
         pygame.draw.circle(self.original_surface, RED, (25, 25), 25, 4)
     def update(self):
 
         # Aktualizacja pozycji przy kliknieciu
         if keyboard.is_pressed("down_arrow"):
-            self.rect.y += 5
+            self.rect.y += 1
         if keyboard.is_pressed("up_arrow"):
-            self.rect.y -= 5
+            self.moveForward()
         if keyboard.is_pressed("left_arrow"):
             self.image = pygame.transform.rotate(self.original_surface, self.angle)
-            self.angle -= 1 % 360
+            self.updateAngle(4)
             x, y = self.rect.center
             self.rect = self.image.get_rect()
             self.rect.center = (x, y)
         if keyboard.is_pressed("right_arrow"):
             self.image = pygame.transform.rotate(self.original_surface, self.angle)
-            self.angle += 1 % 360
+            self.updateAngle(-4)
             x, y = self.rect.center
             self.rect = self.image.get_rect()
             self.rect.center = (x, y)
@@ -65,7 +76,58 @@ class Player(pygame.sprite.Sprite):
             self.rect.left = rock.rect.right
         if self.rect.collidepoint(rock.rect.midbottom):
             self.rect.top = rock.rect.bottom
+    def moveForward(self):
+        # Zmiana pozycji przy poruszaniu sie w kierunku  w  konkretnych cwiartkach
+        if 0 < self.angle < 45:
+            self.rect.x -= LOW_SPEED
+            self.rect.y -= HIGH_SPEED
+        if 45 < self.angle < 90:
+            self.rect.x -= HIGH_SPEED
+            self.rect.y -= LOW_SPEED
+        if 90 < self.angle < 135:
+            self.rect.x -= HIGH_SPEED
+            self.rect.y += LOW_SPEED
+        if 135 < self.angle < 180:
+            self.rect.x -= LOW_SPEED
+            self.rect.y += HIGH_SPEED
+        if 180 < self.angle < 225:
+            self.rect.x += LOW_SPEED
+            self.rect.y += HIGH_SPEED
+        if 225 < self.angle < 270:
+            self.rect.x += HIGH_SPEED
+            self.rect.y += LOW_SPEED
+        if 270 < self.angle < 315:
+            self.rect.x += HIGH_SPEED
+            self.rect.y -= LOW_SPEED
+        if 315 < self.angle < 460:
+            self.rect.x += LOW_SPEED
+            self.rect.y -= HIGH_SPEED
 
+        ## Wartosci progowe w cwiartkach
+        if self.angle == 0:
+            self.rect.x -= NO_SPEED
+            self.rect.y -= HIGH_SPEED
+        if self.angle == 45:
+            self.rect.x -= HIGH_SPEED
+            self.rect.y -= HIGH_SPEED
+        if self.angle == 90:
+            self.rect.x -= HIGH_SPEED
+            self.rect.y -= NO_SPEED
+        if self.angle == 135:
+            self.rect.x -= HIGH_SPEED
+            self.rect.y += HIGH_SPEED
+        if self.angle == 180:
+            self.rect.x += NO_SPEED
+            self.rect.y += HIGH_SPEED
+        if self.angle == 225:
+            self.rect.x += HIGH_SPEED
+            self.rect.y += HIGH_SPEED
+        if self.angle == 270:
+            self.rect.x += HIGH_SPEED
+            self.rect.y -= 0
+        if self.angle == 315:
+            self.rect.x += HIGH_SPEED
+            self.rect.y -= HIGH_SPEED
 
 
 class RockGenerator():
