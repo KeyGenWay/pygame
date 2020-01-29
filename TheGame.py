@@ -1,6 +1,7 @@
 import pygame
 import random
 import keyboard
+import math
 
 WIDTH = 800
 HEIGHT = 800
@@ -11,12 +12,17 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+INITIAL_SIZE_NUMBER = 3
+MAX_SIZE_NUMBER = 8
+SIZE_MODIFICATOR = 10
+INITIAL_SIZE = INITIAL_SIZE_NUMBER * SIZE_MODIFICATOR
 
 
-HIGH_SPEED = 4
-#MID_SPEED = 3 Aktualnie nie wykorzystywane, moze zostac uzyte aby uplynnic poruszanie sie gracza
-LOW_SPEED = 2
-NO_SPEED = 0
+HIGH_SPEED_FACTOR = 1.5
+MEDIUM_SPEED_FACTOR = 1
+NORMAL_SPEED_FACTOR = 0.5
+LOW_SPEED_FACTOR = 0.2
+NO_SPEED_FACTOR = 0
 
 FPS = 60
 # Przenikanie ze sciany na sciane
@@ -38,27 +44,47 @@ def collideWithBorder(self):
         self.rect.bottom = HEIGHT
     if self.rect.top < 0:
         self.rect.top = 0
+
 class Player(pygame.sprite.Sprite):
     angle = 0
+    angle_modificator = 4
+    current_size = 0
+    size_modificator = 0.1
+    current_speed = 1
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.current_size = INITIAL_SIZE
+        self.rerender()
+        self.rect.center = (WIDTH / 2, HEIGHT / 2)
+
+    def eat(self):
+        dictWithoutSelf = allSprites.copy()
+        dictWithoutSelf.remove(self)
+        collidedSprite = self.rect.collidedict(dictWithoutSelf.spritedict)
+        if collidedSprite is not None:
+            if isinstance(collidedSprite[0], Food):
+                collidedSprite[0].kill()
+                self.current_size += int(self.current_size * self.size_modificator)
+                self.rect.inflate_ip(self.size_modificator, self.size_modificator)
+
+    def rerender(self):
+        self.original_surface = pygame.Surface((self.current_size, self.current_size))
+        self.image = self.original_surface
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+        pygame.draw.line(self.original_surface, BLUE,
+                         (self.current_size / 2, self.current_size / 2), (self.current_size / 2, 0), 4)
+        pygame.draw.circle(self.original_surface, BLUE,
+                           (self.current_size / 2, self.current_size / 2), self.current_size / 2, 4)
 
     def updateAngle(self, x):
-        self.angle += x;
+        self.angle += x
         if self.angle >= 360:
             self.angle = 0
         if self.angle < 0:
             self.angle = 360
-    def __init__(self):
-        pygame.sprite.Sprite.__init__(self)
-        self.original_surface = pygame.Surface((50, 50))
-        self.image = self.original_surface
-        self.image.fill(WHITE)
-        #self.image.fill(GREEN)
-        self.rect = self.image.get_rect()
-        self.rect.center = (WIDTH / 2, HEIGHT / 2)
-        pygame.draw.line(self.original_surface, RED, (25,25), (25,0), 4)
-        pygame.draw.circle(self.original_surface, RED, (25, 25), 30, 4)
-    def update(self):
 
+    def update(self):
         # Aktualizacja pozycji przy kliknieciu
         if keyboard.is_pressed("down_arrow"):
             self.move(True)
@@ -66,180 +92,134 @@ class Player(pygame.sprite.Sprite):
             self.move(False)
         if keyboard.is_pressed("left_arrow"):
             self.image = pygame.transform.rotate(self.original_surface, self.angle)
-            self.updateAngle(4)
+            self.updateAngle(self.angle_modificator)
             x, y = self.rect.center
             self.rect = self.image.get_rect()
             self.rect.center = (x, y)
         if keyboard.is_pressed("right_arrow"):
             self.image = pygame.transform.rotate(self.original_surface, self.angle)
-            self.updateAngle(-4)
+            self.updateAngle(-self.angle_modificator)
             x, y = self.rect.center
             self.rect = self.image.get_rect()
             self.rect.center = (x, y)
 
+        self.eat()
         # Przenikanie ze sciany na sciane
         moveToOtherSide(self)
 
     def move(self, backward):
-        direction = self.angle;
+        direction = self.angle
         if backward:
             direction = direction - 180
             if direction < 0:
                 direction = 360 + direction
-        # Zmiana pozycji przy poruszaniu sie w kierunku  w  konkretnych cwiartkach
-        if 0 < direction < 45:
-            self.rect.x -= LOW_SPEED
-            self.rect.y -= HIGH_SPEED
-        if 45 < direction < 90:
-            self.rect.x -= HIGH_SPEED
-            self.rect.y -= LOW_SPEED
-        if 90 < direction < 135:
-            self.rect.x -= HIGH_SPEED
-            self.rect.y += LOW_SPEED
-        if 135 < direction < 180:
-            self.rect.x -= LOW_SPEED
-            self.rect.y += HIGH_SPEED
-        if 180 < direction < 225:
-            self.rect.x += LOW_SPEED
-            self.rect.y += HIGH_SPEED
-        if 225 < direction < 270:
-            self.rect.x += HIGH_SPEED
-            self.rect.y += LOW_SPEED
-        if 270 < direction < 315:
-            self.rect.x += HIGH_SPEED
-            self.rect.y -= LOW_SPEED
-        if 315 < direction < 460:
-            self.rect.x += LOW_SPEED
-            self.rect.y -= HIGH_SPEED
 
-        ## Wartosci progowe w cwiartkach
-        if direction == 0:
-            self.rect.x -= NO_SPEED
-            self.rect.y -= HIGH_SPEED
-        if direction == 45:
-            self.rect.x -= HIGH_SPEED
-            self.rect.y -= HIGH_SPEED
-        if direction == 90:
-            self.rect.x -= HIGH_SPEED
-            self.rect.y -= NO_SPEED
-        if direction == 135:
-            self.rect.x -= HIGH_SPEED
-            self.rect.y += HIGH_SPEED
-        if direction == 180:
-            self.rect.x += NO_SPEED
-            self.rect.y += HIGH_SPEED
-        if direction == 225:
-            self.rect.x += HIGH_SPEED
-            self.rect.y += HIGH_SPEED
-        if direction == 270:
-            self.rect.x += HIGH_SPEED
-            self.rect.y -= 0
-        if direction == 315:
-            self.rect.x += HIGH_SPEED
-            self.rect.y -= HIGH_SPEED
+        radians = math.radians(direction)
+        self.rect.x -= 10 * math.sin(radians) * NORMAL_SPEED_FACTOR
+        self.rect.y -= 10 * math.cos(radians) * NORMAL_SPEED_FACTOR
 
+    def reduceSize(self):
+        self.current_size -= 1
+        #self.bounceAfterHit()
+        if self.current_size == 0:
+            self.kill()
+    #def bounceAfterHit(self):
+        # self.current_speed += 20
+        #Not implemented yet
+    def kill(self):
+        allSprites.remove(self)
 
-class RockGenerator():
-    def generateRock(self):
-        return Rock()
-
-class Rock(pygame.sprite.Sprite):
-    __dx = 0
-    __dy = 0
-    __cycle = 60*FPS
+class BadPixel(pygame.sprite.Sprite):
     detectRange = 200
     def __init__(self):
+        CURRENT_SIZE = INITIAL_SIZE
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((50, 50))
+        self.image = pygame.Surface((CURRENT_SIZE, CURRENT_SIZE))
         self.rect = self.image.get_rect()
         self.image.fill(WHITE)
         self.rect.center = (random.randint(1, WIDTH), random.randint(1, HEIGHT))
-        pygame.draw.circle(self.image, GREEN, (25,25), 15, 15)
-    def update(self):
-        #self.rect.x += self.__dx
-        #self.rect.y += self.__dy
-        #if self.__cycle == 0:
-        #    self.__dx = random.randint(-2, 2)
-        #    self.__dy = random.randint(-2, 2)
-        #    self.__cycle = 60*FPS
-        #self.__cycle -= FPS
+        pygame.draw.circle(self.image, RED, (CURRENT_SIZE / 2, CURRENT_SIZE / 2), CURRENT_SIZE / 2, CURRENT_SIZE / 2)
+
+    def update(self, *args):
+        self.detectAndGoAfterPlayer()
         self.collideWithPlayer()
-        self.detectAndRunAwayFromPlayer()
-        collideWithBorder(self)
-        self.collideWithSecondRock()
-    def collideWithPlayer(self):
-        #Kolizja z graczem (prost wersja na punktach srodkowych)
-        if self.rect.collidepoint(player.rect.midtop):
-            self.rect.y -= HIGH_SPEED
-        if self.rect.collidepoint(player.rect.midbottom):
-            self.rect.y += HIGH_SPEED
-        if self.rect.collidepoint(player.rect.midleft):
-            self.rect.x -= HIGH_SPEED
-        if self.rect.collidepoint(player.rect.midright):
-            self.rect.x += HIGH_SPEED
-        #Kolizja na punktach katowych
-        if self.rect.collidepoint(player.rect.topleft):
-            self.rect.y -= HIGH_SPEED
-            self.rect.x -= HIGH_SPEED
-        if self.rect.collidepoint(player.rect.topright):
-            self.rect.y -= HIGH_SPEED
-            self.rect.x += HIGH_SPEED
-        if self.rect.collidepoint(player.rect.bottomleft):
-            self.rect.y += HIGH_SPEED
-            self.rect.x -= HIGH_SPEED
-        if self.rect.collidepoint(player.rect.bottomright):
-            self.rect.y += HIGH_SPEED
-            self.rect.x += HIGH_SPEED
-    def collideWithSecondRock(self):
-         collidedSprite = self.rect.collidedict(allSprites.spritedict)
-         print("Collision")
-         print(collidedSprite[0].rect.center)
+
     def detectAndGoAfterPlayer(self):
-        # Ponizszy kod zamiast uciekac goni gracza
-        if abs(self.rect.center[0] - player.rect.center[0]) < self.detectRange and abs(self.rect.center[1] - player.rect.center[1]) < self.detectRange:
-            if self.rect.x > player.rect.x:
-                if self.rect.y > player.rect.y:
-                    #print("He is left above!")
-                    self.rect.y -= HIGH_SPEED
-                    self.rect.x -= HIGH_SPEED
-                else:
-                    #print("He is left below!")
-                    self.rect.y += HIGH_SPEED
-                    self.rect.x -= HIGH_SPEED
-            else:
-                if self.rect.y > player.rect.y:
-                    #print("He is right above!")
-                    self.rect.y -= HIGH_SPEED
-                    self.rect.x += HIGH_SPEED
-                else:
-                    #print("He is right below!")
-                    self.rect.y += HIGH_SPEED
-                    self.rect.x += HIGH_SPEED
+        selfX = self.rect.center[0]
+        selfY = self.rect.center[1]
+        playerX = player.rect.center[0]
+        playerY = player.rect.center[1]
+        distanceToPlayer = math.sqrt((playerY - selfY) ** 2 + (playerX - selfX) ** 2)
+        if distanceToPlayer < self.detectRange:
+            radians = math.atan2(playerY - selfY, playerX - selfX)
+            self.rect.x += 10 * math.cos(radians) * LOW_SPEED_FACTOR
+            self.rect.y += 10 * math.sin(radians) * LOW_SPEED_FACTOR
+
+    def collideWithPlayer(self):
+        if self.rect.colliderect(player.rect):
+            player.reduceSize()
+
+class Food(pygame.sprite.Sprite):
+    detectRange = 200
+    current_size = 1
+    def __init__ (self):
+        self.current_size = INITIAL_SIZE
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((self.current_size, self.current_size))
+        self.rect = self.image.get_rect()
+        self.image.fill(WHITE)
+        self.rect.center = (random.randint(1, WIDTH), random.randint(1, HEIGHT))
+        pygame.draw.circle(self.image, GREEN, (self.current_size/2, self.current_size/2), self.current_size/2, self.current_size/2)
+    def update(self):
+        self.collideWithFood()
+        self.detectAndRunAwayFromPlayer()
+        #self.collideWithPlayer()
+        collideWithBorder(self)
+    def kill(self):
+        allSprites.remove(self)
+   # def collideWithPlayer(self):
+
+
+    def collideWithFood(self):
+        dictWithoutSelfAndPlayer = allSprites.copy()
+        dictWithoutSelfAndPlayer.remove(self)
+        dictWithoutSelfAndPlayer.remove(player)
+        collidedSprite = self.rect.collidedict(dictWithoutSelfAndPlayer.spritedict)
+        if collidedSprite is not None:
+            selfX = self.rect.center[0]
+            selfY = self.rect.center[1]
+            spriteX = collidedSprite[0].rect.center[0]
+            spriteY = collidedSprite[0].rect.center[1]
+            distanceToSprite = math.sqrt((spriteY - selfY) ** 2 + (spriteX - selfX) ** 2)
+            if distanceToSprite < self.current_size:
+                radians = math.atan2(spriteY - selfY, spriteX - selfX)
+                degrees = math.degrees(radians)
+                degrees += 180 % 360
+                radians = math.radians(degrees)
+                self.rect.x += (10 * math.cos(radians))
+                self.rect.y += (10 * math.sin(radians))
+            # Missing moving food further
 
     def detectAndRunAwayFromPlayer(self):
-        # Uciekanie przed graczem
-        if abs(self.rect.center[0] - player.rect.center[0]) < self.detectRange and abs(
-                self.rect.center[1] - player.rect.center[1]) < self.detectRange:
-            if self.rect.x > player.rect.x:
-                if self.rect.y > player.rect.y:
-                    #print("He is left above!")
-                    self.rect.y += LOW_SPEED
-                    self.rect.x += LOW_SPEED
-                else:
-                    #print("He is left below!")
-                    self.rect.y -= LOW_SPEED
-                    self.rect.x += LOW_SPEED
-            else:
-                if self.rect.y > player.rect.y:
-                    #print("He is right above!")
-                    self.rect.y += LOW_SPEED
-                    self.rect.x -= LOW_SPEED
-                else:
-                    #print("He is right below!")
-                    self.rect.y -= LOW_SPEED
-                    self.rect.x -= LOW_SPEED
+        selfX = self.rect.center[0]
+        selfY = self.rect.center[1]
+        playerX = player.rect.center[0]
+        playerY = player.rect.center[1]
+        distanceToPlayer = math.sqrt((playerY - selfY)**2 + (playerX - selfX)**2)
+        if distanceToPlayer < self.detectRange:
+            radians = math.atan2(playerY-selfY, playerX - selfX)
+            degrees = math.degrees(radians)
+            degrees += 180 % 360
+            radians = math.radians(degrees)
+            self.rect.x += 10 * math.cos(radians) * LOW_SPEED_FACTOR
+            self.rect.y += 10 * math.sin(radians) * LOW_SPEED_FACTOR
 
 
+class SpriteGenerator():
+    def generateFood(self):
+        return Food()
+    def generateBadPixel(self):
+        return BadPixel()
 
 
 pygame.init()
@@ -250,12 +230,14 @@ clock = pygame.time.Clock()
 
 allSprites = pygame.sprite.Group()
 player = Player()
-generator = RockGenerator()
-rock = Rock()
+generator = SpriteGenerator()
+food = Food()
 allSprites.add(player)
-allSprites.add(rock)
-for i in range(10):
-   allSprites.add(generator.generateRock())
+
+for i in range(90):
+   allSprites.add(generator.generateFood())
+#for i in range(2):
+#    allSprites.add(generator.generateBadPixel())
 running = True
 
 while running:
@@ -270,8 +252,5 @@ while running:
     screen.fill(WHITE)
     allSprites.draw(screen)
     pygame.display.flip()
-
-
-
 
 pygame.quit()
