@@ -3,8 +3,10 @@ import random
 import keyboard
 import math
 
-WIDTH = 800
-HEIGHT = 800
+
+font_name = pygame.font.match_font('arial')
+WIDTH = 1024
+HEIGHT = 760
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -12,19 +14,20 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+SCORE = 0
+
 INITIAL_SIZE_NUMBER = 3
-MAX_SIZE_NUMBER = 8
 SIZE_MODIFICATOR = 10
 INITIAL_SIZE = INITIAL_SIZE_NUMBER * SIZE_MODIFICATOR
 
-
-HIGH_SPEED_FACTOR = 1.5
-MEDIUM_SPEED_FACTOR = 1
+HIGH_SPEED_FACTOR = 1
 NORMAL_SPEED_FACTOR = 0.5
+MEDIUM_SPEED_FACTOR = 0.3
 LOW_SPEED_FACTOR = 0.2
 NO_SPEED_FACTOR = 0
 
 FPS = 60
+
 # Przenikanie ze sciany na sciane
 def moveToOtherSide(self):
     if self.rect.left > WIDTH:
@@ -54,28 +57,23 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.current_size = INITIAL_SIZE
-        self.rerender()
+        self.original_surface = pygame.Surface((self.current_size, self.current_size))
+        self.image = self.original_surface
+        self.rect = self.image.get_rect()
         self.rect.center = (WIDTH / 2, HEIGHT / 2)
+        self.image.fill(WHITE)
+        pygame.draw.line(self.image, BLUE,
+                         (self.current_size / 2, self.current_size / 2), (self.current_size / 2, 0), 4)
+        pygame.draw.circle(self.image, BLUE,
+                           (self.current_size / 2, self.current_size / 2), self.current_size / 2, 4)
 
     def eat(self):
-        dictWithoutSelf = allSprites.copy()
-        dictWithoutSelf.remove(self)
-        collidedSprite = self.rect.collidedict(dictWithoutSelf.spritedict)
+        global SCORE
+        collidedSprite = self.rect.collidedict(foodSprites.spritedict)
         if collidedSprite is not None:
             if isinstance(collidedSprite[0], Food):
                 collidedSprite[0].kill()
-                self.current_size += int(self.current_size * self.size_modificator)
-                self.rect.inflate_ip(self.size_modificator, self.size_modificator)
-
-    def rerender(self):
-        self.original_surface = pygame.Surface((self.current_size, self.current_size))
-        self.image = self.original_surface
-        self.image.fill(WHITE)
-        self.rect = self.image.get_rect()
-        pygame.draw.line(self.original_surface, BLUE,
-                         (self.current_size / 2, self.current_size / 2), (self.current_size / 2, 0), 4)
-        pygame.draw.circle(self.original_surface, BLUE,
-                           (self.current_size / 2, self.current_size / 2), self.current_size / 2, 4)
+                SCORE += 10
 
     def updateAngle(self, x):
         self.angle += x
@@ -89,6 +87,7 @@ class Player(pygame.sprite.Sprite):
         if keyboard.is_pressed("down_arrow"):
             self.move(True)
         if keyboard.is_pressed("up_arrow"):
+
             self.move(False)
         if keyboard.is_pressed("left_arrow"):
             self.image = pygame.transform.rotate(self.original_surface, self.angle)
@@ -120,17 +119,15 @@ class Player(pygame.sprite.Sprite):
 
     def reduceSize(self):
         self.current_size -= 1
-        #self.bounceAfterHit()
         if self.current_size == 0:
             self.kill()
-    #def bounceAfterHit(self):
-        # self.current_speed += 20
-        #Not implemented yet
     def kill(self):
-        allSprites.remove(self)
+        playersSprites.remove(self)
 
 class BadPixel(pygame.sprite.Sprite):
-    detectRange = 200
+    detectRange = 400
+    cycle = 0
+    angle = 0
     def __init__(self):
         CURRENT_SIZE = INITIAL_SIZE
         pygame.sprite.Sprite.__init__(self)
@@ -140,24 +137,65 @@ class BadPixel(pygame.sprite.Sprite):
         self.rect.center = (random.randint(1, WIDTH), random.randint(1, HEIGHT))
         pygame.draw.circle(self.image, RED, (CURRENT_SIZE / 2, CURRENT_SIZE / 2), CURRENT_SIZE / 2, CURRENT_SIZE / 2)
 
-    def update(self, *args):
-        self.detectAndGoAfterPlayer()
-        self.collideWithPlayer()
+    def eat(self):
+        collidedSprite = self.rect.collidedict(foodSprites.spritedict)
+        if collidedSprite is not None:
+            if isinstance(collidedSprite[0], Food):
+                collidedSprite[0].kill()
 
-    def detectAndGoAfterPlayer(self):
+    def update(self, *args):
+        self.seekPlayer()
+        self.eat()
+        self.collideWithPlayer()
+        moveToOtherSide(self)
+
+    def seekPlayer(self):
         selfX = self.rect.center[0]
         selfY = self.rect.center[1]
         playerX = player.rect.center[0]
         playerY = player.rect.center[1]
         distanceToPlayer = math.sqrt((playerY - selfY) ** 2 + (playerX - selfX) ** 2)
-        if distanceToPlayer < self.detectRange:
+        if distanceToPlayer <= self.detectRange:
             radians = math.atan2(playerY - selfY, playerX - selfX)
-            self.rect.x += 10 * math.cos(radians) * LOW_SPEED_FACTOR
-            self.rect.y += 10 * math.sin(radians) * LOW_SPEED_FACTOR
+            self.rect.x += 10 * math.cos(radians) * MEDIUM_SPEED_FACTOR
+            self.rect.y += 10 * math.sin(radians) * MEDIUM_SPEED_FACTOR
+        else:
+            self.seekFood()
+
+    def seekFood(self):
+        closestSprite = None
+        smallestDistance = 400
+        for sprite in foodSprites.sprites():
+            selfX = self.rect.center[0]
+            selfY = self.rect.center[1]
+            spriteX = sprite.rect.center[0]
+            spriteY = sprite.rect.center[1]
+            distanceToFood = math.sqrt((spriteY - selfY) ** 2 + (spriteX - selfX) ** 2)
+            if distanceToFood < smallestDistance:
+                smallestDistance = distanceToFood
+                closestSprite = sprite
+        if closestSprite is not None:
+            closestSpriteX = closestSprite.rect.center[0]
+            closestSpriteY = closestSprite.rect.center[1]
+            if smallestDistance < self.detectRange:
+                radians = math.atan2(closestSpriteY - selfY, closestSpriteX - selfX)
+                self.rect.x += 10 * math.cos(radians) * LOW_SPEED_FACTOR
+                self.rect.y += 10 * math.sin(radians) * LOW_SPEED_FACTOR
+        else:
+            self.wonderAround()
 
     def collideWithPlayer(self):
         if self.rect.colliderect(player.rect):
             player.reduceSize()
+
+    def wonderAround(self):
+        if self.cycle % 90 == 0:
+            self.angle = random.randint(0,360)
+            self.cycle = 0
+        radians = math.radians(self.angle)
+        self.rect.x += 10 * math.cos(radians) * LOW_SPEED_FACTOR
+        self.rect.y += 10 * math.sin(radians) * LOW_SPEED_FACTOR
+        self.cycle += 1
 
 class Food(pygame.sprite.Sprite):
     detectRange = 200
@@ -173,18 +211,16 @@ class Food(pygame.sprite.Sprite):
     def update(self):
         self.collideWithFood()
         self.detectAndRunAwayFromPlayer()
-        #self.collideWithPlayer()
         collideWithBorder(self)
     def kill(self):
-        allSprites.remove(self)
-   # def collideWithPlayer(self):
+        foodSprites.remove(self)
 
 
     def collideWithFood(self):
-        dictWithoutSelfAndPlayer = allSprites.copy()
-        dictWithoutSelfAndPlayer.remove(self)
-        dictWithoutSelfAndPlayer.remove(player)
-        collidedSprite = self.rect.collidedict(dictWithoutSelfAndPlayer.spritedict)
+        dictWithoutSelf = foodSprites.copy()
+        dictWithoutSelf.remove(self)
+        dictWithoutSelf.remove(player)
+        collidedSprite = self.rect.collidedict(dictWithoutSelf.spritedict)
         if collidedSprite is not None:
             selfX = self.rect.center[0]
             selfY = self.rect.center[1]
@@ -198,7 +234,6 @@ class Food(pygame.sprite.Sprite):
                 radians = math.radians(degrees)
                 self.rect.x += (10 * math.cos(radians))
                 self.rect.y += (10 * math.sin(radians))
-            # Missing moving food further
 
     def detectAndRunAwayFromPlayer(self):
         selfX = self.rect.center[0]
@@ -228,29 +263,47 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("TheGame")
 clock = pygame.time.Clock()
 
-allSprites = pygame.sprite.Group()
-player = Player()
+def draw_text(surf,text,size,x,y):
+    font = pygame.font.Font(font_name, size)
+    text_surface = font.render(text, True, BLACK)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x,y)
+    surf.blit(text_surface, text_rect)
+
 generator = SpriteGenerator()
-food = Food()
-allSprites.add(player)
+
+foodSprites = pygame.sprite.Group()
+badPixelsSprites = pygame.sprite.Group()
+playersSprites = pygame.sprite.Group()
+
+player = Player()
+playersSprites.add(player)
 
 for i in range(90):
-   allSprites.add(generator.generateFood())
-#for i in range(2):
-#    allSprites.add(generator.generateBadPixel())
+   foodSprites.add(generator.generateFood())
+for i in range(5):
+    badPixelsSprites.add(generator.generateBadPixel())
 running = True
 
 while running:
     clock.tick(FPS)
 
     for event in pygame.event.get():
-
         if event.type == pygame.QUIT:
             running = False
 
-    allSprites.update()
-    screen.fill(WHITE)
-    allSprites.draw(screen)
-    pygame.display.flip()
+    foodSprites.update()
+    badPixelsSprites.update()
+    playersSprites.update()
 
+    screen.fill(WHITE)
+    draw_text(screen, "SCORE:", 20, WIDTH/2-50, 10)
+    draw_text(screen, str(SCORE), 20, WIDTH/2, 10)
+
+
+    foodSprites.draw(screen)
+    badPixelsSprites.draw(screen)
+    playersSprites.draw(screen)
+
+    pygame.display.flip()
 pygame.quit()
