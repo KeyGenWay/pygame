@@ -1,0 +1,23 @@
+Sprawozdanie Podstawy Programowania Python
+
+Autorzy:
+Grzegorz Czenczek
+Maciej Kowalczyk
+
+Wymagane moduły:
+Pygame
+
+Instrukcja Obsługi gry:
+
+1. Gre należy uruchomić za pomocą jakiegkolwiek środowiska.
+
+
+Gra polega na zdobyciu jak największej ilości punktów poprzez zjadanie jedzenia "Food" wyświetlanego jako zielone koła
+na ekranie.
+Gracz "Niebieski okrąg" musi omijać czerwone punkty zwane jako "Bad Pixel" i zbierać zielony punkty zwane jako "Food".
+Każdy jeden zjedzony element liczony jest jako 10.
+Dotknięcie z czerwonym pikselem skutkuje szybką utratą zdrowia.
+
+Zdrowie oraz aktualny wynik wyświetlane są u góry ekranu.
+
+Gracz moze zrestartować grę za pomocą przycisku R po przegranym lub wygranym meczu.
