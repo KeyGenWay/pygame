@@ -14,11 +14,12 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
-SCORE = 0
-
 INITIAL_SIZE_NUMBER = 3
 SIZE_MODIFICATOR = 10
 INITIAL_SIZE = INITIAL_SIZE_NUMBER * SIZE_MODIFICATOR
+
+NUMBER_OF_FOOD = 100
+NUMBER_OF_BADPIXELS = 7
 
 HIGH_SPEED_FACTOR = 1
 NORMAL_SPEED_FACTOR = 0.5
@@ -118,9 +119,11 @@ class Player(pygame.sprite.Sprite):
         self.rect.y -= 10 * math.cos(radians) * NORMAL_SPEED_FACTOR
 
     def reduceSize(self):
+        global GAME_OVER
         self.current_size -= 1
         if self.current_size == 0:
             self.kill()
+            GAME_OVER = True
     def kill(self):
         playersSprites.remove(self)
 
@@ -128,6 +131,8 @@ class BadPixel(pygame.sprite.Sprite):
     detectRange = 400
     cycle = 0
     angle = 0
+    randomRadians = math.radians(90)
+    modificator = random.randint(-1, 1)
     def __init__(self):
         CURRENT_SIZE = INITIAL_SIZE
         pygame.sprite.Sprite.__init__(self)
@@ -157,8 +162,15 @@ class BadPixel(pygame.sprite.Sprite):
         distanceToPlayer = math.sqrt((playerY - selfY) ** 2 + (playerX - selfX) ** 2)
         if distanceToPlayer <= self.detectRange:
             radians = math.atan2(playerY - selfY, playerX - selfX)
+
+            if self.cycle % 90 == 0:
+                self.randomRadians = math.radians(45)
+                self.modificator = random.randint(-1, 1)
+                self.cycle = 0
+            radians += self.randomRadians *self.modificator
             self.rect.x += 10 * math.cos(radians) * MEDIUM_SPEED_FACTOR
             self.rect.y += 10 * math.sin(radians) * MEDIUM_SPEED_FACTOR
+            self.cycle += 1
         else:
             self.seekFood()
 
@@ -260,8 +272,7 @@ class SpriteGenerator():
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("TheGame")
-clock = pygame.time.Clock()
+pygame.display.set_caption("TheFoodEater")
 
 def draw_text(surf,text,size,x,y):
     font = pygame.font.Font(font_name, size)
@@ -269,41 +280,74 @@ def draw_text(surf,text,size,x,y):
     text_rect = text_surface.get_rect()
     text_rect.midtop = (x,y)
     surf.blit(text_surface, text_rect)
+def initialize():
+    global SCORE
+    global clock
+    global generator
+    global foodSprites
+    global badPixelsSprites
+    global playersSprites
+    global GAME_OVER
+    global SUCCESS
+    global player
+    SCORE = 0
+    clock = pygame.time.Clock()
 
-generator = SpriteGenerator()
+    generator = SpriteGenerator()
 
-foodSprites = pygame.sprite.Group()
-badPixelsSprites = pygame.sprite.Group()
-playersSprites = pygame.sprite.Group()
+    foodSprites = pygame.sprite.Group()
+    badPixelsSprites = pygame.sprite.Group()
+    playersSprites = pygame.sprite.Group()
 
-player = Player()
-playersSprites.add(player)
+    player = Player()
+    playersSprites.add(player)
 
-for i in range(90):
-   foodSprites.add(generator.generateFood())
-for i in range(5):
-    badPixelsSprites.add(generator.generateBadPixel())
+    GAME_OVER = False
+    SUCCESS = False
+    for i in range(NUMBER_OF_FOOD):
+        foodSprites.add(generator.generateFood())
+    for i in range(NUMBER_OF_BADPIXELS):
+        badPixelsSprites.add(generator.generateBadPixel())
+
+
 running = True
-
+initialize()
 while running:
     clock.tick(FPS)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                initialize()
 
-    foodSprites.update()
-    badPixelsSprites.update()
-    playersSprites.update()
+
 
     screen.fill(WHITE)
-    draw_text(screen, "SCORE:", 20, WIDTH/2-50, 10)
-    draw_text(screen, str(SCORE), 20, WIDTH/2, 10)
 
+    if GAME_OVER:
+        draw_text(screen, "GAME OVER", 20, WIDTH / 2 , HEIGHT / 2)
+        draw_text(screen, "Your score: " + str(SCORE), 20, WIDTH / 2, HEIGHT / 2 +25)
+        draw_text(screen, "Press R to restart game", 20, WIDTH / 2, HEIGHT / 2 + 50)
+    elif SUCCESS:
+        draw_text(screen, "You win!!!", 20, WIDTH / 2, HEIGHT / 2)
+        draw_text(screen, "Your score: " + str(SCORE), 20, WIDTH / 2, HEIGHT / 2 + 25)
+        draw_text(screen, "Press R to restart game", 20, WIDTH / 2, HEIGHT / 2 + 50)
+    else:
+        draw_text(screen, "SCORE:", 20, WIDTH/2-50, 10)
+        draw_text(screen, str(SCORE), 20, WIDTH/2, 10)
+        draw_text(screen, "HEALTH: " + str(player.current_size), 20, WIDTH / 2 + 200, 10)
 
-    foodSprites.draw(screen)
-    badPixelsSprites.draw(screen)
-    playersSprites.draw(screen)
+        if not foodSprites:
+            SUCCESS = True
+        foodSprites.update()
+        badPixelsSprites.update()
+        playersSprites.update()
+
+        foodSprites.draw(screen)
+        badPixelsSprites.draw(screen)
+        playersSprites.draw(screen)
 
     pygame.display.flip()
 pygame.quit()
