@@ -140,7 +140,7 @@ class BadPixel(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.image.fill(WHITE)
         self.rect.center = (random.randint(1, WIDTH), random.randint(1, HEIGHT))
-        pygame.draw.circle(self.image, RED, (CURRENT_SIZE / 2, CURRENT_SIZE / 2), CURRENT_SIZE / 2, CURRENT_SIZE / 2)
+        pygame.draw.circle(self.image, RED, (CURRENT_SIZE / 2, CURRENT_SIZE / 2), CURRENT_SIZE / 2, int(CURRENT_SIZE / 2))
 
     def eat(self):
         collidedSprite = self.rect.collidedict(foodSprites.spritedict)
@@ -219,7 +219,7 @@ class Food(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.image.fill(WHITE)
         self.rect.center = (random.randint(1, WIDTH), random.randint(1, HEIGHT))
-        pygame.draw.circle(self.image, GREEN, (self.current_size/2, self.current_size/2), self.current_size/2, self.current_size/2)
+        pygame.draw.circle(self.image, GREEN, (self.current_size/2, self.current_size/2), self.current_size/2, int(self.current_size/2))
     def update(self):
         self.collideWithFood()
         self.detectAndRunAwayFromPlayer()
